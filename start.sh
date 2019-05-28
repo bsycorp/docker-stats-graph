@@ -1,48 +1,57 @@
 #!/bin/bash
 while getopts "hi:e:d:" option; do
   case $option in
-    h) echo "usage: $(basename $0) [-i include] [-e exclude] [-p port] [-d docker host]"; exit ;;
-    i) RECORD_INCLUDE_FILTER=$OPTARG ;;
-    e) RECORD_EXCLUDE_FILTER=$OPTARG ;;
-    p) RECORD_SERVE_PORT=$OPTARG ;;
-	d) RECORD_DOCKER_HOST_TRANSPORT=$OPTARG ;;
+    h) echo "usage: $(basename $0) [-i include] [-e exclude] [-s result port] [-d docker transport] [-h docker host] [-p docker port]"; exit ;;
+    i) STATS_INCLUDE_FILTER=$OPTARG ;;
+    e) STATS_EXCLUDE_FILTER=$OPTARG ;;
+    s) STATS_SERVE_PORT=$OPTARG ;;
+    d) STATS_DOCKER_HOST_TRANSPORT=$OPTARG ;;
+    h) STATS_DOCKER_HOST=$OPTARG ;;
+    p) STATS_DOCKER_PORT=$OPTARG ;;
     ?) echo "error: option -$OPTARG is not implemented"; exit ;;
   esac
 done
 
-if [ -z "$RECORD_INCLUDE_FILTER" ]; then
-	RECORD_INCLUDE_FILTER="."
+if [ -z "$STATS_INCLUDE_FILTER" ]; then
+	STATS_INCLUDE_FILTER="."
 fi
 
-if [ -z "$RECORD_EXCLUDE_FILTER" ]; then
-	RECORD_EXCLUDE_FILTER="POD"
+if [ -z "$STATS_EXCLUDE_FILTER" ]; then
+	STATS_EXCLUDE_FILTER="POD"
 fi
 
-if [ -z "$RECORD_SERVE_PORT" ]; then
-	RECORD_SERVE_PORT="10001"
+if [ -z "$STATS_SERVE_PORT" ]; then
+	STATS_SERVE_PORT="10180"
 fi
 
-if [ -z "$RECORD_DOCKER_HOST_TRANSPORT" ]; then
-	RECORD_DOCKER_HOST_TRANSPORT="socket"
+if [ -z "$STATS_DOCKER_HOST" ]; then
+	STATS_DOCKER_HOST="localhost"
 fi
 
-if [ "$RECORD_DOCKER_HOST_TRANSPORT" == "socket" ]; then
+if [ -z "$STATS_DOCKER_PORT" ]; then
+	STATS_DOCKER_PORT="2375"
+fi
+
+if [ -z "$STATS_DOCKER_HOST_TRANSPORT" ]; then
+	STATS_DOCKER_HOST_TRANSPORT="socket"
+fi
+
+if [ "$STATS_DOCKER_HOST_TRANSPORT" == "socket" ]; then
 	# apply filter, find docker container ids we want to monitor
 	if [ ! -S /var/run/docker.sock ]; then
 		echo "Need to make docker socket available at: /var/run/docker.sock"
 		exit 1
 	fi
-	CURL_CMD="curl --silent --unix-socket /var/run/docker.sock http://localhost"
+	CURL_CMD="curl --silent --unix-socket /var/run/docker.sock http://$STATS_DOCKER_HOST"
 
-elif [ "$RECORD_DOCKER_HOST_TRANSPORT" == "tcp" ]; then
-	CURL_CMD="curl --silent http://localhost:2375"
-	
+elif [ "$STATS_DOCKER_HOST_TRANSPORT" == "tcp" ]; then
+	CURL_CMD="curl --silent http://$STATS_DOCKER_HOST:$STATS_DOCKER_PORT"	
 else
 	echo "Unsupported docker host transport, only support socket or tcp"
 	exit 1
 fi
 
-CONTAINERS=$($CURL_CMD/containers/json | jq -r ".[] | [.Names[0][1:],.Id] | @csv" | sed 's|"||g' | grep $RECORD_INCLUDE_FILTER | grep -v $RECORD_EXCLUDE_FILTER)
+CONTAINERS=$($CURL_CMD/containers/json | jq -r ".[] | [.Names[0][1:],.Id] | @csv" | sed 's|"||g' | grep $STATS_INCLUDE_FILTER | grep -v $STATS_EXCLUDE_FILTER)
 mkdir -p data
 
 while read -r CONTAINER; do
@@ -59,8 +68,8 @@ done <<< "$CONTAINERS"
 {
 	# start server to return recorded data
 	mkdir -p output
-	echo "Listening on port $RECORD_SERVE_PORT"
-	socat tcp-l:$RECORD_SERVE_PORT,reuseaddr,fork exec:/serve.sh
+	echo "Listening on port $STATS_SERVE_PORT"
+	socat tcp-l:$STATS_SERVE_PORT,reuseaddr,fork exec:/serve.sh
 } &
 
 # wait for background processes to complete and fail if they do, possible they will run forevs then an outside process will have to kill this process.
