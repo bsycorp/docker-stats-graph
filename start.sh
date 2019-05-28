@@ -35,18 +35,18 @@ while read -r CONTAINER; do
 	CONTAINER_ID=$(echo "$CONTAINER" | cut -d',' -f 2)
 	echo "Monitoring $CONTAINER_NAME ($CONTAINER_ID)"
 	{
-		curl --silent --unix-socket /var/run/docker.sock http://localhost/containers/$CONTAINER_ID/stats \
-			| jq --unbuffered -r "[.read, .cpu_stats.cpu_usage.total_usage, .cpu_stats.throttling_data.throttled_time, .memory_stats.usage, .memory_stats.limit] | @csv" \
-			>> "data/$CONTAINER_NAME.data"
+		curl --silent --unix-socket /var/run/docker.sock http://localhost/containers/$CONTAINER_ID/stats | \
+		jq --unbuffered -r "[.read, .cpu_stats.cpu_usage.total_usage, .cpu_stats.system_cpu_usage, (.cpu_stats.cpu_usage.percpu_usage | length), .cpu_stats.throttling_data.throttled_time, .memory_stats.usage, .memory_stats.limit] | @csv"
+		>> "data/$CONTAINER_NAME.data"
 	} &
 done <<< "$CONTAINERS"
 
-{
+# {
 	# start server to return recorded data
-	mkdir -p /output
-	echo "Listening on port $SERVE_PORT"
-	socat tcp-l:$SERVE_PORT,reuseaddr,fork exec:/serve.sh
-} &
+	# mkdir -p output
+	# echo "Listening on port $SERVE_PORT"
+	# socat tcp-l:$SERVE_PORT,reuseaddr,fork exec:serve.sh
+# } &
 
 # wait for background processes to complete and fail if they do, possible they will run forevs then an outside process will have to kill this process.
 FAIL=0
