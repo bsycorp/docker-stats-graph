@@ -2,10 +2,13 @@
 # generate graph and zip them, then return to user
 set -e
 rm -f /data/*.csv
-for FILENAME in $(cd /data; ls -1 *.data)
+rm -f /output/*
+rm -f /tmp/output.zip
+
+for RAW_OUTPUT in $(cd /data; ls -1 *.data)
 do
-	FIXED_FILENAME="$FILENAME_calculated.csv"
-	cat /data/$FILENAME | sed 's|"||g' | awk -F',' '
+	CALCULATION_OUTPUT="$RAW_OUTPUT-calculated.csv"
+	cat /data/$RAW_OUTPUT | sed 's|"||g' | awk -F',' '
 	  previousLine!="" {
 		  curr=$0;
 		  $0=previousLine;
@@ -26,16 +29,17 @@ do
 	  	previousLine=$0;
 	  	next
 	  }
-	' > /data/$FIXED_FILENAME
-	gnuplot -e "filename=\"/data/$FIXED_FILENAME\"; set output \"/output/$FILENAME.png\"" plot-config/cpu-usage.gnuplot > /dev/null 2>&1
+	' > /data/$CALCULATION_OUTPUT
+	GRAPH_TITLE=$(basename -s .data $RAW_OUTPUT | sed 's|_|-|g')
+	gnuplot -e "filename=\"/data/$CALCULATION_OUTPUT\"; set output \"/output/$RAW_OUTPUT.png\"; set title \"$GRAPH_TITLE\"" plot-config/cpu-memory-usage.gnuplot > /dev/null 2>&1
 done
-(cd output; zip /tmp/output.zip * > /dev/null 2>&1)
+(cd output; zip /tmp/output.zip * /data/* > /dev/null 2>&1)
 
-filename="/tmp/output.zip"
+ZIP_OUTPUT="/tmp/output.zip"
 echo "HTTP/1.1 200 OK"
 echo "Content-type: application/octet-stream"
-echo "Content-Length: $(wc -c < $filename)"
+echo "Content-Length: $(wc -c < $ZIP_OUTPUT)"
 echo "Content-Transfer-Encoding: binary"
-echo "Content-Disposition: attachment; filename=graphs.zip"
+echo "Content-Disposition: attachment; ZIP_OUTPUT=graphs.zip"
 echo ""
-cat $filename
+cat $ZIP_OUTPUT
