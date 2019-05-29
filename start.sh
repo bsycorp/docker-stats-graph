@@ -1,12 +1,13 @@
 #!/bin/bash
-while getopts "ui:e:s:d:h:p:" option; do
+while getopts "ui:e:s:d:h:c:p:" option; do
   case $option in
-    u) echo "usage: $(basename $0) [-i include] [-e exclude] [-s result port] [-d docker transport] [-h docker host] [-p docker port]"; exit ;;
+    u) echo "usage: $(basename $0) [-i include] [-e exclude] [-s result port] [-d docker transport] [-h docker host] [-c docker socket path] [-p docker port]"; exit ;;
     i) STATS_INCLUDE_FILTER=$OPTARG ;;
     e) STATS_EXCLUDE_FILTER=$OPTARG ;;
     s) STATS_SERVE_PORT=$OPTARG ;;
     d) STATS_DOCKER_HOST_TRANSPORT=$OPTARG ;;
     h) STATS_DOCKER_HOST=$OPTARG ;;
+    c) STATS_DOCKER_SOCKET=$OPTARG ;;
     p) STATS_DOCKER_PORT=$OPTARG ;;
     ?) echo "error: option -$OPTARG is not implemented"; exit ;;
   esac
@@ -32,17 +33,21 @@ if [ -z "$STATS_DOCKER_PORT" ]; then
 	STATS_DOCKER_PORT="2375"
 fi
 
+if [ -z "$STATS_DOCKER_SOCKET" ]; then
+	STATS_DOCKER_SOCKET="/var/run/docker.sock"
+fi
+
 if [ -z "$STATS_DOCKER_HOST_TRANSPORT" ]; then
 	STATS_DOCKER_HOST_TRANSPORT="socket"
 fi
 
 if [ "$STATS_DOCKER_HOST_TRANSPORT" == "socket" ]; then
 	# apply filter, find docker container ids we want to monitor
-	if [ ! -S /var/run/docker.sock ]; then
-		echo "Need to make docker socket available at: /var/run/docker.sock"
+	if [ ! -S $STATS_DOCKER_SOCKET ]; then
+		echo "Need to make docker socket available at: $STATS_DOCKER_SOCKET"
 		exit 1
 	fi
-	CURL_CMD="curl --silent --unix-socket /var/run/docker.sock http://$STATS_DOCKER_HOST"
+	CURL_CMD="curl --silent --unix-socket $STATS_DOCKER_SOCKET http://$STATS_DOCKER_HOST"
 
 elif [ "$STATS_DOCKER_HOST_TRANSPORT" == "tcp" ]; then
 	CURL_CMD="curl --silent http://$STATS_DOCKER_HOST:$STATS_DOCKER_PORT"	
