@@ -56,7 +56,17 @@ else
 	exit 1
 fi
 
-CONTAINERS=$($CURL_CMD/containers/json | jq -r ".[] | [.Names[0][1:],.Id] | @csv" | sed 's|"||g' | grep $STATS_INCLUDE_FILTER | grep -v $STATS_EXCLUDE_FILTER)
+# try to find containers upto 10 times if we don't find any
+for i in {1..10}; do
+	echo "Finding containers with filter: $STATS_INCLUDE_FILTER and excluding $STATS_EXCLUDE_FILTER"
+	CONTAINERS=$($CURL_CMD/containers/json | jq -r ".[] | [.Names[0][1:],.Id] | @csv" | sed 's|"||g' | grep $STATS_INCLUDE_FILTER | grep -v $STATS_EXCLUDE_FILTER)
+	if [ -z "$CONTAINERS" ]; then
+		sleep 2
+	else
+		break
+	fi
+done
+
 mkdir -p data
 
 while read -r CONTAINER; do
