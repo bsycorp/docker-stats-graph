@@ -1,7 +1,7 @@
 #!/bin/bash
-while getopts "hi:e:d:" option; do
+while getopts "ui:e:s:d:h:p:" option; do
   case $option in
-    h) echo "usage: $(basename $0) [-i include] [-e exclude] [-s result port] [-d docker transport] [-h docker host] [-p docker port]"; exit ;;
+    u) echo "usage: $(basename $0) [-i include] [-e exclude] [-s result port] [-d docker transport] [-h docker host] [-p docker port]"; exit ;;
     i) STATS_INCLUDE_FILTER=$OPTARG ;;
     e) STATS_EXCLUDE_FILTER=$OPTARG ;;
     s) STATS_SERVE_PORT=$OPTARG ;;
