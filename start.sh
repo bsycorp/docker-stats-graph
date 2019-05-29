@@ -25,6 +25,10 @@ if [ -z "$STATS_SERVE_PORT" ]; then
 	STATS_SERVE_PORT="10180"
 fi
 
+if [ -z "$STATS_SERVE_INTERFACE" ]; then
+	STATS_SERVE_INTERFACE="0.0.0.0"
+fi
+
 if [ -z "$STATS_DOCKER_HOST" ]; then
 	STATS_DOCKER_HOST="localhost"
 fi
@@ -84,7 +88,7 @@ done <<< "$CONTAINERS"
 	# start server to return recorded data
 	mkdir -p output
 	echo "Listening on port $STATS_SERVE_PORT"
-	socat tcp-l:$STATS_SERVE_PORT,reuseaddr,fork exec:/serve.sh
+	socat tcp-l:$STATS_SERVE_PORT,reuseaddr,fork,bind=$STATS_SERVE_INTERFACE exec:/serve.sh
 } &
 
 # wait for background processes to complete and fail if they do, possible they will run forevs then an outside process will have to kill this process.
