@@ -79,7 +79,7 @@ while read -r CONTAINER; do
 	echo "Monitoring $CONTAINER_NAME ($CONTAINER_ID)"
 	{
 		$CURL_CMD/containers/$CONTAINER_ID/stats | \
-		jq --unbuffered -r "[.read, .cpu_stats.cpu_usage.total_usage, .cpu_stats.system_cpu_usage, (.cpu_stats.cpu_usage.percpu_usage | length), .cpu_stats.throttling_data.throttled_time, .memory_stats.usage, .memory_stats.limit] | @csv" \
+		jq --unbuffered -r "[.read, .cpu_stats.cpu_usage.total_usage, .cpu_stats.system_cpu_usage, (.cpu_stats.cpu_usage.percpu_usage | map(select(. > 0)) | length), .cpu_stats.throttling_data.throttled_time, .memory_stats.usage, .memory_stats.limit] | @csv" \
 		>> "data/$CONTAINER_NAME.data"
 	} &
 done <<< "$CONTAINERS"
