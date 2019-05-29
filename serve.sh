@@ -18,10 +18,12 @@ do
 		  $0=curr;
 		  cpuDelta=$2-previousCpu;
 		  systemDelta=$3-previousSystem;
+		  numCpus=$4;
 		  throttledDelta=$5-previousThrottled;
-		  cpuPercent=(cpuDelta/systemDelta)*100;
+		  scaledCpuPercent=(cpuDelta/systemDelta)*100;
+		  cpuPercent=scaledCpuPercent*numCpus;
 		  memoryPercent=($6/$7)*100;
-		  printf("%s,%2.2f,%i,%2.2f,%i,%i\n", $1, cpuPercent, throttledDelta, memoryPercent, $6, $7);
+		  printf("%s,%2.2f,%i,%2.2f,%i,%i\n", $1, scaledCpuPercent, cpuPercent, throttledDelta, memoryPercent, $6, $7);
 		  
 		  previousLine = $0
 	  }
